@@ -1,25 +1,53 @@
-import logo from './logo.svg';
-import './App.css';
+import "./App.css";
+import Board from "./components/Board/Board";
+import { ChessContext } from "./store/chess-context";
+import React, { useContext } from "react";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import {
+  FLIP_BOARD,
+  MIN_SCALE,
+  MAX_SCALE,
+  SET_SCALE,
+} from "./assets/constants";
+import Slider from "@mui/material/Slider";
 
-function App() {
+const App = () => {
+  const ctx = useContext(ChessContext);
+
+  const clickHandler = (e, data) => {
+    console.log("e", e);
+    ctx.dispatchAction({
+      type: FLIP_BOARD,
+    });
+  };
+
+  const handleChange = (e) => {
+    console.log("e", e);
+    if (e.target.value < MIN_SCALE || e.target.value > MAX_SCALE) return;
+    ctx.dispatchAction({
+      type: SET_SCALE,
+      scale: e.target.value,
+    });
+  };
+  const squareToMoveFrom = ctx.squareToMoveTo.hasOwnProperty("code") && <Chip label={`From: ${ctx.squareToMoveFrom.code}`} variant="outlined" />;
+  const squareToMoveTo = ctx.squareToMoveTo.hasOwnProperty("code") && <Chip label={`To: ${ctx.squareToMoveTo.code}`} variant="outlined" />;
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <React.Fragment>
+      <Board></Board>
+      <Button variant="outlined" onClick={clickHandler} >FLIP BOARD</Button>
+      <Slider
+        aria-label="Volume"
+        value={ctx.scale}
+        onChange={handleChange}
+        min={MIN_SCALE}
+        max={MAX_SCALE}
+      />
+      {squareToMoveFrom}<br/>
+      {squareToMoveTo}
+      <div>TURN : {ctx.whiteTurn ? "WHITE" : "BLACK"}</div>
+    </React.Fragment>
   );
-}
+};
 
 export default App;
