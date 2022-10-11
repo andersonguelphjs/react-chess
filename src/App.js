@@ -16,7 +16,6 @@ const App = () => {
   const ctx = useContext(ChessContext);
 
   const clickHandler = (e, data) => {
-    console.log("e", e);
     ctx.dispatchAction({
       type: FLIP_BOARD,
     });
@@ -32,20 +31,22 @@ const App = () => {
   };
   const squareToMoveFrom = ctx.squareToMoveTo.hasOwnProperty("code") && <Chip label={`From: ${ctx.squareToMoveFrom.code}`} variant="outlined" />;
   const squareToMoveTo = ctx.squareToMoveTo.hasOwnProperty("code") && <Chip label={`To: ${ctx.squareToMoveTo.code}`} variant="outlined" />;
+  const {board, whiteTurn} = ctx.game
   return (
     <React.Fragment>
       <Board></Board>
       <Button variant="outlined" onClick={clickHandler} >FLIP BOARD</Button>
+      <Button variant="outlined" onClick={()=> console.log(board)} >Model</Button>
       <Slider
         aria-label="Volume"
-        value={ctx.scale}
+        value={ctx.game.board.scale}
         onChange={handleChange}
         min={MIN_SCALE}
         max={MAX_SCALE}
       />
       {squareToMoveFrom}<br/>
       {squareToMoveTo}
-      <div>TURN : {ctx.whiteTurn ? "WHITE" : "BLACK"}</div>
+      <div>TURN : {whiteTurn ? "WHITE" : "BLACK"}</div>
     </React.Fragment>
   );
 };

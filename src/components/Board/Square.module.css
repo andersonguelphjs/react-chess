@@ -15,10 +15,12 @@
 
 .blackSquare {
     background-color: black;
+    background-color: #b58863;
 }
 
 .whiteSquare {
     background-color: white;
+    background-color: #FFCC99;
 }
 .glowBorder {
     -webkit-box-shadow:0 0 20px yellow; 
@@ -27,6 +29,9 @@
 
 }
 
+.possibleSquare {
+background-color: aqua;
+}
  svg {
 
     filter:
