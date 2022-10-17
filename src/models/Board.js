@@ -75,6 +75,7 @@ export class Board {
   }
 
   getStartPiece = (x, y) => {
+    console.log("getStartPiece", x, y);
     switch (y) {
       case 0:
         switch (x) {

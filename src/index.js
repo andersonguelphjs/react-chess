@@ -8,9 +8,9 @@ import { ChessProvider } from './store/chess-provider';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-
+<React.StrictMode>
   <ChessProvider><App /></ChessProvider>
-    
+  </React.StrictMode>
 
 );
 

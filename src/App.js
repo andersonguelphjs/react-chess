@@ -4,6 +4,8 @@ import { ChessContext } from "./store/chess-context";
 import React, { useContext } from "react";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import MoveHistory from "./components/MoveHistory/MoveHistory";
+import ButtonNav from "./components/ButtonNav/ButtonNav";
 import {
   FLIP_BOARD,
   MIN_SCALE,
@@ -11,6 +13,7 @@ import {
   SET_SCALE,
 } from "./assets/constants";
 import Slider from "@mui/material/Slider";
+
 
 const App = () => {
   const ctx = useContext(ChessContext);
@@ -31,7 +34,7 @@ const App = () => {
   };
   const squareToMoveFrom = ctx.squareToMoveTo.hasOwnProperty("code") && <Chip label={`From: ${ctx.squareToMoveFrom.code}`} variant="outlined" />;
   const squareToMoveTo = ctx.squareToMoveTo.hasOwnProperty("code") && <Chip label={`To: ${ctx.squareToMoveTo.code}`} variant="outlined" />;
-  const {board, whiteTurn} = ctx.game
+  const {board, whiteMove} = ctx.game
   return (
     <React.Fragment>
       <Board></Board>
@@ -46,7 +49,9 @@ const App = () => {
       />
       {squareToMoveFrom}<br/>
       {squareToMoveTo}
-      <div>TURN : {whiteTurn ? "WHITE" : "BLACK"}</div>
+      <div>TURN : {whiteMove ? "WHITE" : "BLACK"}</div>
+      <MoveHistory/>
+      <ButtonNav/>
     </React.Fragment>
   );
 };

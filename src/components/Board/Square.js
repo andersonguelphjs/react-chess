@@ -12,10 +12,9 @@ import {
   SET_SQAURE_TO_MOVE_TO,
   SET_SQUARES_TO_MOVE_FROM,
   SET_MOVE_SQUARES_TO_EMPTY_OBJECTS,
-  SET_POSSIBLE_SQUARES_TO_MOVE_TO,
   MOVE_PIECE_TO_SQUARE,
   MAKE_SQUARE_EMPTY,
-  SWITCH_TURN,
+  SWITCH_MOVE,
   PAWN,
   ROOK,
   KNIGHT,
@@ -26,29 +25,29 @@ import {
 
 const getPiece = (i) => {
   switch (i) {
-    case "pd":
+    case "Pd":
       return <Pawn isWhite={false} />;
-    case "pl":
+    case "Pl":
       return <Pawn isWhite={true} />;
-    case "nd":
+    case "Nd":
       return <Knight isWhite={false} />;
-    case "nl":
+    case "Nl":
       return <Knight isWhite={true} />;
-    case "bd":
+    case "Bd":
       return <Bishop isWhite={false} />;
-    case "bl":
+    case "Bl":
       return <Bishop isWhite={true} />;
-    case "rd":
+    case "Rd":
       return <Rook isWhite={false} />;
-    case "rl":
+    case "Rl":
       return <Rook isWhite={true} />;
-    case "qd":
+    case "Qd":
       return <Queen isWhite={false} />;
-    case "ql":
+    case "Ql":
       return <Queen isWhite={true} />;
-    case "kd":
+    case "Kd":
       return <King isWhite={false} />;
-    case "kl":
+    case "Kl":
       return <King isWhite={true} />;
     default:
       return "";
@@ -94,7 +93,7 @@ const Square = (props) => {
     data.y = board.flipped ? data.y * -1 : data.y;
     const movedXSquares = Math.round(data.x / board.scale);
     const movedYSquares = Math.round(data.y / board.scale);
-    console.log("getSquare", ctx);
+
     let newSquare;
     if (
       (Math.abs(movedXSquares) || Math.abs(movedYSquares)) > 0 &&
@@ -108,7 +107,6 @@ const Square = (props) => {
       newSquare = squares.find(
         (square) => square.x === xCoordinate && square.y === yCoordinate
       );
-      console.log("new square: ", newSquare);
     }
     ctx.dispatchAction({
       type: SET_SQAURE_TO_MOVE_TO,
@@ -124,12 +122,6 @@ const Square = (props) => {
   };
 
   const getPossibleSquare = (x, y) => {
-    console.log(
-      "get possible square: ",
-      x,
-      y,
-      squares.find((square) => square.x === x && square.y === y)
-    );
     return squares.find((square) => square.x === x && square.y === y);
   };
   const isSquareOccupied = (square) => {
@@ -137,28 +129,24 @@ const Square = (props) => {
   };
   const isCapturableSquare = (x, y, attackingColorIsWhite) => {
     const capturableSquare = getPossibleSquare(x, y);
-    console.log(
-      "capturableSquare",
-      capturableSquare,
-      attackingColorIsWhite,
-      capturableSquare?.piece?.isWhite !== attackingColorIsWhite
-    );
+
     if (capturableSquare?.piece)
       return capturableSquare?.piece?.isWhite !== attackingColorIsWhite;
     return false;
   };
   const getXYSquares = (config = {}) => {
-    console.log("getXYSquares", config);
     const XYsquares = [];
     const { isPawn, x, y, isKing, isWhite, hasMoved } = config;
     if (isPawn) {
       if (isValidSquare(x, isWhite ? y - 1 : y + 1)) {
         const oneAhead = getPossibleSquare(x, isWhite ? y - 1 : y + 1);
-        if (!isSquareOccupied(oneAhead)) XYsquares.push(oneAhead);
-      }
-      if (!hasMoved && isValidSquare(x, isWhite ? y - 2 : y + 2)) {
-        const twoAhead = getPossibleSquare(x, isWhite ? y - 2 : y + 2);
-        if (!isSquareOccupied(twoAhead)) XYsquares.push(twoAhead);
+        if (!isSquareOccupied(oneAhead)) {
+          XYsquares.push(oneAhead);
+          if (!hasMoved && isValidSquare(x, isWhite ? y - 2 : y + 2)) {
+            const twoAhead = getPossibleSquare(x, isWhite ? y - 2 : y + 2);
+            if (!isSquareOccupied(twoAhead)) XYsquares.push(twoAhead);
+          }
+        }
       }
     } else {
       const max = isKing ? 1 : 7;
@@ -169,7 +157,6 @@ const Square = (props) => {
         [-1, 0],
       ];
       xyDelta.forEach((d) => {
-        console.log(x, y);
         let blocked = false;
         for (let i = 1; i <= max; i++) {
           if (blocked) break;
@@ -180,7 +167,10 @@ const Square = (props) => {
             if (!isSquareOccupied(square)) {
               XYsquares.push(square);
             } else {
-              if (isCapturableSquare(deltaX, deltaY, isWhite)) {
+              if (
+                config.isOppositeKingCheck ||
+                isCapturableSquare(deltaX, deltaY, isWhite)
+              ) {
                 XYsquares.push(square);
               }
               blocked = true;
@@ -191,12 +181,11 @@ const Square = (props) => {
         }
       });
     }
-    console.log("XYsquares", XYsquares);
+
     return XYsquares;
   };
 
   const getDiagonalSquares = (config = {}) => {
-    console.log("getDiagonalSquares", config);
     let diagonalSquares = [];
     const { x, y, isPawn, isKing, isWhite } = config;
     if (isPawn) {
@@ -204,7 +193,8 @@ const Square = (props) => {
       const captureSqaureY = isWhite ? y - 1 : y + 1;
       if (
         isValidSquare(topLeftCaptureSqaureX, captureSqaureY) &&
-        isCapturableSquare(topLeftCaptureSqaureX, captureSqaureY, isWhite)
+        (config.isOppositeKingCheck ||
+          isCapturableSquare(topLeftCaptureSqaureX, captureSqaureY, isWhite))
       ) {
         diagonalSquares.push(
           getPossibleSquare(topLeftCaptureSqaureX, captureSqaureY)
@@ -213,7 +203,8 @@ const Square = (props) => {
       const topRightCaptureSqaureX = x + 1;
       if (
         isValidSquare(topRightCaptureSqaureX, captureSqaureY) &&
-        isCapturableSquare(topRightCaptureSqaureX, captureSqaureY, isWhite)
+        (config.isOppositeKingCheck ||
+          isCapturableSquare(topRightCaptureSqaureX, captureSqaureY, isWhite))
       ) {
         diagonalSquares.push(
           getPossibleSquare(topRightCaptureSqaureX, captureSqaureY)
@@ -228,7 +219,6 @@ const Square = (props) => {
         [1, 1],
       ];
       xyDelta.forEach((d) => {
-        console.log(x, y);
         let blocked = false;
         for (let i = 1; i <= max; i++) {
           if (blocked) break;
@@ -239,7 +229,10 @@ const Square = (props) => {
             if (!isSquareOccupied(square)) {
               diagonalSquares.push(square);
             } else {
-              if (isCapturableSquare(deltaX, deltaY, isWhite)) {
+              if (
+                config.isOppositeKingCheck ||
+                isCapturableSquare(deltaX, deltaY, isWhite)
+              ) {
                 diagonalSquares.push(square);
               }
               blocked = true;
@@ -250,7 +243,7 @@ const Square = (props) => {
         }
       });
     }
-    console.log("diagonalSquares", diagonalSquares);
+
     return diagonalSquares;
   };
 
@@ -260,7 +253,7 @@ const Square = (props) => {
     const coordinates = [
       [x - 1, y - 2],
       [x + 1, y - 2],
-      [x + 2, y - 2],
+      [x + 2, y - 1],
       [x + 2, y + 1],
       [x + 1, y + 2],
       [x - 1, y + 2],
@@ -271,6 +264,7 @@ const Square = (props) => {
       if (isValidSquare(c[0], c[1])) {
         const square = getPossibleSquare(c[0], c[1]);
         if (
+          config.isOppositeKingCheck ||
           isCapturableSquare(c[0], c[1], isWhite) ||
           !isSquareOccupied(square)
         )
@@ -300,11 +294,105 @@ const Square = (props) => {
     return knightMoves;
   };
 
-  const getCastlingSquares = (config = {}) => {};
+  const getCastlingSquares = (originSquare, squaresOppositionCanAttack) => {
+    const { squares } = ctx.game.board;
+
+    const queenSideCastleSquare = squares.find(
+      (s) =>
+        (originSquare.piece.isWhite && s.code === "c1") ||
+        (!originSquare.piece.isWhite && s.code === "c8")
+    );
+    const kingSideCastleSquare = squares.find(
+      (s) =>
+        (originSquare.piece.isWhite && s.code === "g1") ||
+        (!originSquare.piece.isWhite && s.code === "g8")
+    );
+    const queenSideRook = squares.find((s) =>
+      s.code === originSquare.piece.isWhite ? "a1" : "a8"
+    );
+    const kingSideRook = squares.find((s) =>
+      s.code === originSquare.piece.isWhite ? "a1" : "a8"
+    );
+    const queenSideInterval = squares.filter((s) =>
+      originSquare.piece.isWhite
+        ? s.code === "d1" || s.code === "c1"
+        : s.code === "d8" || s.code === "c8"
+    );
+    const kingSideInterval = squares.filter((s) =>
+      originSquare.piece.isWhite
+        ? s.code === "f1" || s.code === "g1"
+        : s.code === "f8" || s.code === "g8"
+    );
+    const castlingSquares = [];
+    // if (originSquare.code === "E1"){//white
+
+    //   //if (ctx.game)
+    // }
+    // else if (originSquare.code === "E8"){//black
+    //   console.log("black getCastlingSquares ", originSquare, squaresOppositionCanAttack);
+    // }
+    //const queenSideInterval
+    if (
+      squaresOppositionCanAttack.filter((s) => s.code === originSquare.code)
+        .length > 0
+    )
+      return [];
+
+    const queenSideRookIsMoved =
+      queenSideRook?.piece.letter !== "R" ||
+      queenSideRook?.piece.numberOfTimesMoved > 0;
+    const queenSideCastleSquareIsChecked =
+      squaresOppositionCanAttack.filter(
+        (s) => s.code === queenSideCastleSquare.code
+      ).length > 0;
+    const queenSideIntervalIsChecked =
+      queenSideInterval.filter(
+        (qsi) =>
+          squaresOppositionCanAttack.filter((s) => s.code === qsi.code).length >
+          0
+      ).length > 0;
+    const queenSideIntervalIsEmpty =
+      queenSideInterval.filter((qsi) => isSquareOccupied(qsi)).length === 0;
+
+    const kingSideRookIsMoved =
+      kingSideRook?.piece.letter !== "R" ||
+      kingSideRook?.piece.numberOfTimesMoved > 0;
+    const kingSideCastleSquareIsChecked =
+      squaresOppositionCanAttack.filter(
+        (s) => s.code === kingSideCastleSquare.code
+      ).length > 0;
+    const kingSideIntervalIsChecked =
+      kingSideInterval.filter(
+        (ksi) =>
+          squaresOppositionCanAttack.filter((s) => s.code === ksi.code).length >
+          0
+      ).length > 0;
+    const kingSideIntervalIsEmpty =
+      kingSideInterval.filter((ksi) => isSquareOccupied(ksi)).length === 0;
+
+    if (
+      !queenSideRookIsMoved &&
+      !queenSideCastleSquareIsChecked &&
+      !queenSideIntervalIsChecked &&
+      queenSideIntervalIsEmpty
+    ) {
+      castlingSquares.push(queenSideCastleSquare);
+    }
+    if (
+      !kingSideRookIsMoved &&
+      !kingSideCastleSquareIsChecked &&
+      !kingSideIntervalIsChecked &&
+      kingSideIntervalIsEmpty
+    ) {
+      castlingSquares.push(kingSideCastleSquare);
+    }
+    //console.log("castlingSquares", castlingSquares);
+    return castlingSquares;
+  };
 
   const getEnPassantSquares = (config = {}) => {};
 
-  const getPawnMoves = (originSquare) => {
+  const getPawnMoves = (originSquare, isOppositeKingCheck) => {
     let possibleSquares = [];
     const { piece, x, y } = originSquare;
     const config = {
@@ -313,8 +401,9 @@ const Square = (props) => {
       x: x,
       y: y,
       isWhite: piece.isWhite,
+      isOppositeKingCheck: isOppositeKingCheck,
     };
-    const XYsquares = getXYSquares(config);
+    const XYsquares = !isOppositeKingCheck && getXYSquares(config);
 
     possibleSquares = possibleSquares.concat(XYsquares);
     const diagonalSquares = getDiagonalSquares(config);
@@ -323,7 +412,7 @@ const Square = (props) => {
     return possibleSquares;
   };
 
-  const getRookMoves = (originSquare) => {
+  const getRookMoves = (originSquare, isOppositeKingCheck) => {
     let possibleSquares = [];
     const { x, y, piece } = originSquare;
     const config = {
@@ -331,6 +420,7 @@ const Square = (props) => {
       x: x,
       y: y,
       isWhite: piece.isWhite,
+      isOppositeKingCheck: isOppositeKingCheck,
     };
     const XYsquares = getXYSquares(config);
 
@@ -339,26 +429,26 @@ const Square = (props) => {
     return possibleSquares;
   };
 
-  const getKnightMoves = (originSquare) => {
-
+  const getKnightMoves = (originSquare, isOppositeKingCheck) => {
     const { x, y, piece } = originSquare;
     const config = {
       x: x,
       y: y,
       isWhite: piece.isWhite,
+      isOppositeKingCheck: isOppositeKingCheck,
     };
 
     return getKnightSquares(config);
   };
 
-  const getBishopMoves = (originSquare) => {
-
+  const getBishopMoves = (originSquare, isOppositeKingCheck) => {
     let possibleSquares = [];
     const { x, y, piece } = originSquare;
     const config = {
       x: x,
       y: y,
       isWhite: piece.isWhite,
+      isOppositeKingCheck: isOppositeKingCheck,
     };
 
     const diagonalSquares = getDiagonalSquares(config);
@@ -367,14 +457,14 @@ const Square = (props) => {
     return possibleSquares;
   };
 
-  const getQueenMoves = (originSquare) => {
-
+  const getQueenMoves = (originSquare, isOppositeKingCheck) => {
     let possibleSquares = [];
-    const { x, y, piece} = originSquare;
+    const { x, y, piece } = originSquare;
     const config = {
       x: x,
       y: y,
       isWhite: piece.isWhite,
+      isOppositeKingCheck: isOppositeKingCheck,
     };
     const XYsquares = getXYSquares(config);
 
@@ -385,21 +475,58 @@ const Square = (props) => {
     return possibleSquares;
   };
 
-  const getKingMoves = (originSquare) => {
+  const getSquaresOppositionCanAttack = (isWhite) => {
+    let opponentSquares = ctx.game.board.squares.filter(
+      (s) => s.piece && s.piece?.isWhite === !isWhite
+    );
+   // console.log("opponentSquares ", opponentSquares);
+    let allPossibleAttacks = [];
+    let uniqueSquares = [];
+    opponentSquares.forEach(
+      (s) =>
+        (allPossibleAttacks = allPossibleAttacks.concat(
+          getPossibleSquaresToMoveTo(s, true)
+        ))
+    );
+    opponentSquares.forEach((s) => {
+      if (!uniqueSquares.find((u) => u.code === s.code)) {
+        uniqueSquares.push(s);
+      }
+    });
 
+    //console.log("uniqueSquares", uniqueSquares);
+    return uniqueSquares;
+  };
+
+  const getKingMoves = (originSquare, isOppositeKingCheck) => {
     let possibleSquares = [];
-    const { x, y, piece} = originSquare;
+    const { x, y, piece } = originSquare;
     const config = {
       isKing: true,
       x: x,
       y: y,
       isWhite: piece.isWhite,
+      isOppositeKingCheck: isOppositeKingCheck,
     };
+
     const XYsquares = getXYSquares(config);
 
     possibleSquares = possibleSquares.concat(XYsquares);
     const diagonalSquares = getDiagonalSquares(config);
     possibleSquares = possibleSquares.concat(diagonalSquares);
+    const squaresOppositionCanAttack =
+      !isOppositeKingCheck && getSquaresOppositionCanAttack(piece.isWhite);
+
+    const castlingSquares =
+      piece.numberOfTimesMoved === 0 &&
+      !isOppositeKingCheck &&
+      getCastlingSquares(originSquare, squaresOppositionCanAttack);
+    possibleSquares = possibleSquares.concat(castlingSquares);
+  
+    if (squaresOppositionCanAttack)
+      possibleSquares = possibleSquares.filter(
+        (p) => !squaresOppositionCanAttack.find((s) => p.code === s.code)
+      );
 
     return possibleSquares;
   };
@@ -408,40 +535,38 @@ const Square = (props) => {
     return x >= 0 && y >= 0 && x <= 7 && y <= 7;
   };
 
-  const getPossibleSquaresToMoveTo = (originSquare) => {
-    console.log(
-      "get possible squares to move",
-      originSquare,
-      originSquare.piece.constructor.name
-    );
+  const getPossibleSquaresToMoveTo = (
+    originSquare,
+    isOppositeKingCheck = false
+  ) => {
     const pieceName = originSquare?.piece?.constructor?.name;
     if (!pieceName) return [];
     switch (originSquare.piece.constructor.name) {
       case PAWN:
-        return getPawnMoves(originSquare);
+        return getPawnMoves(originSquare, isOppositeKingCheck);
       case ROOK:
-        return getRookMoves(originSquare);
+        return getRookMoves(originSquare, isOppositeKingCheck);
       case KNIGHT:
-        return getKnightMoves(originSquare);
+        return getKnightMoves(originSquare, isOppositeKingCheck);
       case BISHOP:
-        return getBishopMoves(originSquare);
+        return getBishopMoves(originSquare, isOppositeKingCheck);
       case QUEEN:
-        return getQueenMoves(originSquare);
+        return getQueenMoves(originSquare, isOppositeKingCheck);
       case KING:
-        return getKingMoves(originSquare);
+        return getKingMoves(originSquare, isOppositeKingCheck);
       default:
         return [];
     }
     //if (square.)
   };
+
   const onStartEventHandler = (e, data) => {
-    //console.log("Start", ctx.squareToMoveFrom, code)
     if (
       !ctx.squareToMoveFrom.hasOwnProperty("code") ||
       ctx.squareToMoveFrom["code"] !== code
     ) {
       const possibleSquaresToMoveTo = getPossibleSquaresToMoveTo(props.square);
-      console.log("done possibleSquaresToMoveTo", possibleSquaresToMoveTo);
+
       ctx.dispatchAction({
         type: SET_SQUARES_TO_MOVE_FROM,
         squareToMoveFrom: props.square,
@@ -451,29 +576,106 @@ const Square = (props) => {
   };
 
   const onStopEventHandler = (e, data) => {
+//    const wrongTurnError = ((ctx.game.whiteMove && action.piece.code.substring(1,2) === "d")) || (!state.game.whiteMove && action.piece.code.substring(1,2) === "l")
+
     const squareToMoveTo = getSquare({
       x: data.x,
       y: data.y,
     });
-    console.log("Stop", squareToMoveTo);
+    const { squares } = ctx.game.board;
+    const doubleMove = (ctx.game.whiteMove && ctx.squareToMoveFrom.piece.code.substring(1,2) === 'd') || (!ctx.game.whiteMove && ctx.squareToMoveFrom.piece.code.substring(1,2) === 'l')
+    const squareIsNotPossible = squareToMoveTo && !ctx.possibleSquaresToMoveTo.find(
+      (p) => p.x === squareToMoveTo.x && p.y === squareToMoveTo.y
+    )
+    console.log("doubleMove", doubleMove);
+    console.log("squareToMoveTo", squareToMoveTo);
+    console.log("squareIsNotPossible ", squareIsNotPossible)
 
-    if (!squareToMoveTo) {
+    if (
+      !squareToMoveTo ||
+      squareIsNotPossible || doubleMove)
+     {
       ctx.dispatchAction({ type: SET_MOVE_SQUARES_TO_EMPTY_OBJECTS });
+      if (doubleMove)  ctx.dispatchAction({ type: SWITCH_MOVE });
       return;
     }
+    console.log("jere")
+    const castleQueenSideRook =
+      ctx.squareToMoveFrom.piece.letter === "K" &&
+      ((ctx.squareToMoveFrom.piece.isWhite &&
+        ctx.squareToMoveFrom.code === "e1" &&
+        ctx.squareToMoveTo.code === "c1") ||
+        (!ctx.squareToMoveFrom.piece.isWhite &&
+          ctx.squareToMoveFrom.code === "e8" &&
+          ctx.squareToMoveTo.code === "c8"))
+        ? ctx.squareToMoveFrom.piece.isWhite
+          ? squares.find((s) => s.code === "a1")
+          : squares.find((s) => s.code === "a8")
+        : null;
+    const castleKingSideRook =
+      ctx.squareToMoveFrom.piece.letter === "K" &&
+      ((ctx.squareToMoveFrom.piece.isWhite &&
+        ctx.squareToMoveFrom.code === "e1" &&
+        ctx.squareToMoveTo.code === "g1") ||
+        (!ctx.squareToMoveFrom.piece.isWhite &&
+          ctx.squareToMoveFrom.code === "e8" &&
+          ctx.squareToMoveTo.code === "g8"))
+        ? ctx.squareToMoveFrom.piece.isWhite
+          ? squares.find((s) => s.code === "h1")
+          : squares.find((s) => s.code === "h8")
+        : null;
+    
     ctx.dispatchAction({
       type: MOVE_PIECE_TO_SQUARE,
       x: squareToMoveTo.x,
       y: squareToMoveTo.y,
       piece: ctx.squareToMoveFrom.piece,
+      record:true,
+      fromSquareCode: ctx.squareToMoveFrom.code,
+      isCastle: castleQueenSideRook ? "O-O-O" : castleKingSideRook ? "O-O" : ""
     });
+
     ctx.dispatchAction({
       type: MAKE_SQUARE_EMPTY,
       x: ctx.squareToMoveFrom.x,
       y: ctx.squareToMoveFrom.y,
     });
+
+    if (castleQueenSideRook) {
+      ctx.dispatchAction({
+        type: MOVE_PIECE_TO_SQUARE,
+        x: 3,
+        y: ctx.squareToMoveFrom.piece.isWhite ? 7 : 0,
+        piece: castleQueenSideRook.piece,
+        record:true,
+        isCastle: "O-O-O"
+      });
+      ctx.dispatchAction({
+        type: MAKE_SQUARE_EMPTY,
+        x: 0,
+        y: ctx.squareToMoveFrom.piece.isWhite ? 7 : 0,
+      });
+    }
+
+    if (castleKingSideRook) {
+      ctx.dispatchAction({
+        type: MOVE_PIECE_TO_SQUARE,
+        x: 5,
+        y: ctx.squareToMoveFrom.piece.isWhite ? 7 : 0,
+        piece: castleKingSideRook.piece,
+        record:true,
+        isCastle: "O-O"
+      });
+      ctx.dispatchAction({
+        type: MAKE_SQUARE_EMPTY,
+        x: 7,
+        y: ctx.squareToMoveFrom.piece.isWhite ? 7 : 0,
+      });
+    }
+
     ctx.dispatchAction({ type: SET_MOVE_SQUARES_TO_EMPTY_OBJECTS });
-    ctx.dispatchAction({ type: SWITCH_TURN });
+    
+    ctx.dispatchAction({ type: SWITCH_MOVE });
   };
 
   const onDragEventHandler = (e, data) => {
@@ -481,7 +683,6 @@ const Square = (props) => {
       x: data.x,
       y: data.y,
     });
-    // if (square) console.log("current square", square);
   };
 
   let dynamicStyle = {
@@ -510,8 +711,8 @@ const Square = (props) => {
         position={{ x: draggedX, y: draggedY }}
         onDrag={onDragEventHandler}
         disabled={
-          (piece.code.includes("l") && !ctx.game.whiteTurn) ||
-          (piece.code.includes("d") && ctx.game.whiteTurn)
+          (piece.code.includes("l") && !ctx.game.whiteMove) ||
+          (piece.code.includes("d") && ctx.game.whiteMove)
         }
       >
         <div ref={nodeRef}>{icon}</div>

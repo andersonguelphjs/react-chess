@@ -9,7 +9,7 @@ export class Square {
     // this._isFlippedLast = this.x === 0;
     this._piece = options.piece || null;
     this._rank = (8 - this.y);
-    this._column = String.fromCharCode(this.x + 65);
+    this._column = String.fromCharCode(this.x + 65).toLowerCase();
     this._code = options.code || (this.column+this.rank);
     this._scale = options.scale || 45
     this._draggedY = options.draggedY || 0;
