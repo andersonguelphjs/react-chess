@@ -1,4 +1,3 @@
-
 import { Piece } from "./Piece";
 export class Bishop extends Piece {
   constructor(options = {}) {
@@ -8,6 +7,4 @@ export class Bishop extends Piece {
     this._code = this.letter + (this.isWhite ? "l" : "d");
     this._value = 3.5;
   }
-
-
 }

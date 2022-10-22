@@ -1,17 +1,19 @@
-import styles from "./Square.module.css";
 import React, { useContext } from "react";
-import Pawn from "../pieces/pawn/pawn";
-import Knight from "../pieces/knight/knight";
-import Bishop from "../pieces/bishop/bishop";
-import Rook from "../pieces/Rook/Rook";
-import Queen from "../pieces/Queen/Queen";
-import King from "../pieces/King/King";
-import Draggable from "react-draggable";
 import { ChessContext } from "../../store/chess-context";
+import styles from "./Square.module.css";
+import Pawn from "../Pieces/Pawn/Pawn";
+import Knight from "../Pieces/Knight/Knight";
+import Bishop from "../Pieces/Bishop/Bishop";
+import Rook from "../Pieces/Rook/Rook";
+import Queen from "../Pieces/Queen/Queen";
+import King from "../Pieces/King/King";
+import Draggable from "react-draggable";
+
 import {
   SET_SQAURE_TO_MOVE_TO,
   SET_SQUARES_TO_MOVE_FROM,
   SET_MOVE_SQUARES_TO_EMPTY_OBJECTS,
+  SET_IS_KING_IN_CHECK,
   MOVE_PIECE_TO_SQUARE,
   MAKE_SQUARE_EMPTY,
   SWITCH_MOVE,
@@ -21,6 +23,7 @@ import {
   BISHOP,
   QUEEN,
   KING,
+  
 } from "../../assets/constants";
 
 const getPiece = (i) => {
@@ -56,33 +59,29 @@ const getPiece = (i) => {
 
 const Square = (props) => {
   const ctx = useContext(ChessContext);
-  const { board } = ctx.game;
-  const { squares } = ctx.game.board;
+  const { game,board, possibleSquaresToMoveTo, squareToMoveFrom, squareToMoveTo } = ctx;
+  const { squares } = ctx.board;
   const {
     x,
     y,
     code,
-    colorChar,
-    column,
-    rank,
     draggedX,
     draggedY,
     isWhite,
-    piece,
-    scale,
+    piece
   } = props.square;
 
   //console.log("square", props, isWhite, x, y, code, colorChar, column, rank, draggedX, draggedY, scale, piece, scale);
   const style = [
     styles.square,
-    ctx?.possibleSquaresToMoveTo?.length > 0 &&
-    ctx.possibleSquaresToMoveTo.find((s) => s.code === code)
+    possibleSquaresToMoveTo?.length > 0 &&
+    possibleSquaresToMoveTo.find((s) => s.code === code)
       ? styles.possibleSquare
       : isWhite
       ? styles.whiteSquare
       : styles.blackSquare,
-    (ctx.squareToMoveFrom?.code && code === ctx.squareToMoveFrom?.code) ||
-    (ctx.squareToMoveTo?.code && code === ctx.squareToMoveTo?.code)
+    (squareToMoveFrom?.code && code === squareToMoveFrom?.code) ||
+    (squareToMoveTo?.code && code === squareToMoveTo?.code)
       ? styles.glowBorder
       : "",
   ];
@@ -102,10 +101,10 @@ const Square = (props) => {
       x + movedXSquares > -1 &&
       x + movedXSquares < 8
     ) {
-      const xCoordinate = x + movedXSquares;
-      const yCoordinate = y + movedYSquares;
+      const newXCoordinate = x + movedXSquares;
+      const newYCoordinate = y + movedYSquares;
       newSquare = squares.find(
-        (square) => square.x === xCoordinate && square.y === yCoordinate
+        (square) => square.x === newXCoordinate && square.y === newYCoordinate
       );
     }
     ctx.dispatchAction({
@@ -124,9 +123,11 @@ const Square = (props) => {
   const getPossibleSquare = (x, y) => {
     return squares.find((square) => square.x === x && square.y === y);
   };
+
   const isSquareOccupied = (square) => {
     return square.piece ? true : false;
   };
+
   const isCapturableSquare = (x, y, attackingColorIsWhite) => {
     const capturableSquare = getPossibleSquare(x, y);
 
@@ -134,6 +135,7 @@ const Square = (props) => {
       return capturableSquare?.piece?.isWhite !== attackingColorIsWhite;
     return false;
   };
+
   const getXYSquares = (config = {}) => {
     const XYsquares = [];
     const { isPawn, x, y, isKing, isWhite, hasMoved } = config;
@@ -295,7 +297,6 @@ const Square = (props) => {
   };
 
   const getCastlingSquares = (originSquare, squaresOppositionCanAttack) => {
-    const { squares } = ctx.game.board;
 
     const queenSideCastleSquare = squares.find(
       (s) =>
@@ -324,14 +325,6 @@ const Square = (props) => {
         : s.code === "f8" || s.code === "g8"
     );
     const castlingSquares = [];
-    // if (originSquare.code === "E1"){//white
-
-    //   //if (ctx.game)
-    // }
-    // else if (originSquare.code === "E8"){//black
-    //   console.log("black getCastlingSquares ", originSquare, squaresOppositionCanAttack);
-    // }
-    //const queenSideInterval
     if (
       squaresOppositionCanAttack.filter((s) => s.code === originSquare.code)
         .length > 0
@@ -476,10 +469,12 @@ const Square = (props) => {
   };
 
   const getSquaresOppositionCanAttack = (isWhite) => {
-    let opponentSquares = ctx.game.board.squares.filter(
+    console.log("getSquaresOppositionCanAttack", isWhite);
+    
+    let opponentSquares = squares.filter(
       (s) => s.piece && s.piece?.isWhite === !isWhite
     );
-   // console.log("opponentSquares ", opponentSquares);
+    console.log("opponentSquares ", opponentSquares.map(os => os.code).join(";"));
     let allPossibleAttacks = [];
     let uniqueSquares = [];
     opponentSquares.forEach(
@@ -562,8 +557,8 @@ const Square = (props) => {
 
   const onStartEventHandler = (e, data) => {
     if (
-      !ctx.squareToMoveFrom.hasOwnProperty("code") ||
-      ctx.squareToMoveFrom["code"] !== code
+      !squareToMoveFrom.hasOwnProperty("code") ||
+      squareToMoveFrom["code"] !== code
     ) {
       const possibleSquaresToMoveTo = getPossibleSquaresToMoveTo(props.square);
 
@@ -576,51 +571,51 @@ const Square = (props) => {
   };
 
   const onStopEventHandler = (e, data) => {
-//    const wrongTurnError = ((ctx.game.whiteMove && action.piece.code.substring(1,2) === "d")) || (!state.game.whiteMove && action.piece.code.substring(1,2) === "l")
 
+    
     const squareToMoveTo = getSquare({
       x: data.x,
       y: data.y,
     });
-    const { squares } = ctx.game.board;
-    const doubleMove = (ctx.game.whiteMove && ctx.squareToMoveFrom.piece.code.substring(1,2) === 'd') || (!ctx.game.whiteMove && ctx.squareToMoveFrom.piece.code.substring(1,2) === 'l')
-    const squareIsNotPossible = squareToMoveTo && !ctx.possibleSquaresToMoveTo.find(
+
+   // const doubleMove = (game.whiteMove && squareToMoveFrom.piece.code.substring(1,2) === 'd') || (!game.whiteMove && squareToMoveFrom.piece.code.substring(1,2) === 'l')
+    const squareIsNotPossible = squareToMoveTo && !possibleSquaresToMoveTo.find(
       (p) => p.x === squareToMoveTo.x && p.y === squareToMoveTo.y
     )
-    console.log("doubleMove", doubleMove);
+    //console.log("doubleMove", doubleMove);
     console.log("squareToMoveTo", squareToMoveTo);
     console.log("squareIsNotPossible ", squareIsNotPossible)
 
     if (
       !squareToMoveTo ||
-      squareIsNotPossible || doubleMove)
+      squareIsNotPossible )
      {
       ctx.dispatchAction({ type: SET_MOVE_SQUARES_TO_EMPTY_OBJECTS });
-      if (doubleMove)  ctx.dispatchAction({ type: SWITCH_MOVE });
+      // if (doubleMove)  ctx.dispatchAction({ type: SWITCH_MOVE });
       return;
     }
-    console.log("jere")
+    //console.log("jere")
     const castleQueenSideRook =
-      ctx.squareToMoveFrom.piece.letter === "K" &&
-      ((ctx.squareToMoveFrom.piece.isWhite &&
-        ctx.squareToMoveFrom.code === "e1" &&
-        ctx.squareToMoveTo.code === "c1") ||
-        (!ctx.squareToMoveFrom.piece.isWhite &&
-          ctx.squareToMoveFrom.code === "e8" &&
-          ctx.squareToMoveTo.code === "c8"))
-        ? ctx.squareToMoveFrom.piece.isWhite
+      squareToMoveFrom.piece.letter === "K" &&
+      ((squareToMoveFrom.piece.isWhite &&
+        squareToMoveFrom.code === "e1" &&
+        squareToMoveTo.code === "c1") ||
+        (!squareToMoveFrom.piece.isWhite &&
+          squareToMoveFrom.code === "e8" &&
+          squareToMoveTo.code === "c8"))
+        ? squareToMoveFrom.piece.isWhite
           ? squares.find((s) => s.code === "a1")
           : squares.find((s) => s.code === "a8")
         : null;
     const castleKingSideRook =
-      ctx.squareToMoveFrom.piece.letter === "K" &&
-      ((ctx.squareToMoveFrom.piece.isWhite &&
-        ctx.squareToMoveFrom.code === "e1" &&
-        ctx.squareToMoveTo.code === "g1") ||
-        (!ctx.squareToMoveFrom.piece.isWhite &&
-          ctx.squareToMoveFrom.code === "e8" &&
-          ctx.squareToMoveTo.code === "g8"))
-        ? ctx.squareToMoveFrom.piece.isWhite
+      squareToMoveFrom.piece.letter === "K" &&
+      ((squareToMoveFrom.piece.isWhite &&
+        squareToMoveFrom.code === "e1" &&
+        squareToMoveTo.code === "g1") ||
+        (!squareToMoveFrom.piece.isWhite &&
+          squareToMoveFrom.code === "e8" &&
+          squareToMoveTo.code === "g8"))
+        ? squareToMoveFrom.piece.isWhite
           ? squares.find((s) => s.code === "h1")
           : squares.find((s) => s.code === "h8")
         : null;
@@ -629,23 +624,23 @@ const Square = (props) => {
       type: MOVE_PIECE_TO_SQUARE,
       x: squareToMoveTo.x,
       y: squareToMoveTo.y,
-      piece: ctx.squareToMoveFrom.piece,
+      piece: squareToMoveFrom.piece,
       record:true,
-      fromSquareCode: ctx.squareToMoveFrom.code,
+      fromSquareCode: squareToMoveFrom.code,
       isCastle: castleQueenSideRook ? "O-O-O" : castleKingSideRook ? "O-O" : ""
     });
 
     ctx.dispatchAction({
       type: MAKE_SQUARE_EMPTY,
-      x: ctx.squareToMoveFrom.x,
-      y: ctx.squareToMoveFrom.y,
+      x: squareToMoveFrom.x,
+      y: squareToMoveFrom.y,
     });
 
     if (castleQueenSideRook) {
       ctx.dispatchAction({
         type: MOVE_PIECE_TO_SQUARE,
         x: 3,
-        y: ctx.squareToMoveFrom.piece.isWhite ? 7 : 0,
+        y: squareToMoveFrom.piece.isWhite ? 7 : 0,
         piece: castleQueenSideRook.piece,
         record:true,
         isCastle: "O-O-O"
@@ -653,7 +648,7 @@ const Square = (props) => {
       ctx.dispatchAction({
         type: MAKE_SQUARE_EMPTY,
         x: 0,
-        y: ctx.squareToMoveFrom.piece.isWhite ? 7 : 0,
+        y: squareToMoveFrom.piece.isWhite ? 7 : 0,
       });
     }
 
@@ -661,7 +656,7 @@ const Square = (props) => {
       ctx.dispatchAction({
         type: MOVE_PIECE_TO_SQUARE,
         x: 5,
-        y: ctx.squareToMoveFrom.piece.isWhite ? 7 : 0,
+        y: squareToMoveFrom.piece.isWhite ? 7 : 0,
         piece: castleKingSideRook.piece,
         record:true,
         isCastle: "O-O"
@@ -669,12 +664,13 @@ const Square = (props) => {
       ctx.dispatchAction({
         type: MAKE_SQUARE_EMPTY,
         x: 7,
-        y: ctx.squareToMoveFrom.piece.isWhite ? 7 : 0,
+        y: squareToMoveFrom.piece.isWhite ? 7 : 0,
       });
     }
 
-    ctx.dispatchAction({ type: SET_MOVE_SQUARES_TO_EMPTY_OBJECTS });
     
+    const newState = ctx.dispatchAction({ type: SET_MOVE_SQUARES_TO_EMPTY_OBJECTS });
+    console.log("newState", newState);
     ctx.dispatchAction({ type: SWITCH_MOVE });
   };
 
@@ -691,8 +687,8 @@ const Square = (props) => {
   };
 
   if (
-    props.x === ctx.squareToMoveFrom.x &&
-    props.y === ctx.squareToMoveFrom.y
+    props.x === squareToMoveFrom.x &&
+    props.y === squareToMoveFrom.y
   ) {
     //dynamicStyle.backGroundColor = ""}
   }
@@ -711,8 +707,8 @@ const Square = (props) => {
         position={{ x: draggedX, y: draggedY }}
         onDrag={onDragEventHandler}
         disabled={
-          (piece.code.includes("l") && !ctx.game.whiteMove) ||
-          (piece.code.includes("d") && ctx.game.whiteMove)
+          (piece.code.includes("l") && !game.whiteMove) ||
+          (piece.code.includes("d") && game.whiteMove)
         }
       >
         <div ref={nodeRef}>{icon}</div>

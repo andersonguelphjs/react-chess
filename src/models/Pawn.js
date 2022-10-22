@@ -7,5 +7,4 @@ export class Pawn extends Piece {
     this._code = this.letter + (this.isWhite ? "l" : "d");
     this._value = 1;
   }
-
 }

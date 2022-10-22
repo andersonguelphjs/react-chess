@@ -1,12 +1,11 @@
-import Square from "./Square";
-
+import React, { useContext, useEffect } from "react";
 import { ChessContext } from "../../store/chess-context";
-import React, { useContext } from "react";
+import Square from "./Square";
 
 const Board = (props) => {
   const ctx = useContext(ChessContext);
-  const { board } = ctx.game;
-  const { squares } = ctx.game.board;
+  const { board, game } = ctx;
+  const { squares } = ctx.board;
 
   const getFlippedBoard = () => {
     let flippedBoard = [];
@@ -17,7 +16,7 @@ const Board = (props) => {
   };
 
   const _squares = board.flipped ? getFlippedBoard() : squares;
-  const _board = _squares.map((s, index) =>
+  const _board = _squares.map((s) =>
     (!board.flipped && s.code.toLowerCase().includes("h")) ||
     (board.flipped && s.code.toLowerCase().includes("a")) ? (
       <React.Fragment key={s.code}>
@@ -28,6 +27,16 @@ const Board = (props) => {
       <Square key={s.code} square={s}/>
     )
   );
+  useEffect(() => {
+
+    const opposingKingSquare = squares.find(s => s.piece && s.piece.isWhite !== game.whiteMove && s.piece.letter === "K");
+    //const newAttackedSquares = getSquaresOppositionCanAttack(opposingKingSquare.piece.isWhite);
+   // const opposingKingIsAttacked = newAttackedSquares.filter(nas => nas.code === opposingKingSquare.code).length > 0;
+    console.log("opposingKingSquare",opposingKingSquare);
+    //console.log("newAttackedSquares", newAttackedSquares.map(n => n.code).join(";"));
+   // console.log("opposingKingIsAttacked: " + opposingKingIsAttacked);
+
+  },[game])
   return _board;
 };
 export default Board;
