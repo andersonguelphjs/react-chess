@@ -1,8 +1,8 @@
 import { createContext } from "react";
 
 export const ChessContext = createContext({
-  squareToMoveTo: {},
-  squareToMoveFrom: {},
+  // squareToMoveTo: {},
+  // squareToMoveFrom: {},
   possibleSquaresToMoveTo: [],
   game: {},
   board: [],
